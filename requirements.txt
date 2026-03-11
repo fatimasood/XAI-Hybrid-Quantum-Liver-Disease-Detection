@@ -1,0 +1,22 @@
+# CORE DEPENDENCIES (Python 3.9+ compatible)
+pandas==2.2.3
+numpy==1.23.5
+pennylane==0.40.0
+tensorflow==2.14.0
+keras-tuner==1.4.7
+scikit-learn==1.7.1
+
+# VISUALIZATION
+matplotlib==3.8.2
+seaborn==0.13.2
+plotly==5.18.0
+
+# XAI LIBRARIES 
+shap==0.44.0
+lime==0.2.0.1
+
+# UTILITIES
+tqdm==4.66.1
+protobuf==3.20.3
+requests==2.31.0
+packaging==23.2
