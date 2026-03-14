@@ -30,7 +30,7 @@ def train():
         # Load and prepare data
         print("\nLoading and preprocessing data...")
         data = DataLoader()
-        data.load_and_preprocess().split_data().scale_features()
+        data.load_and_preprocess()
         data.perform_eda()
         data.get_data_summary()
         

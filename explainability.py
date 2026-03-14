@@ -22,7 +22,7 @@ def explain():
     # Load data and model
     print("\nLoading data and model...")
     data = DataLoader()
-    data.load_and_preprocess().split_data().scale_features()
+    data.load_and_preprocess()
     
     model_path = os.path.join(MODELS_DIR, 'final_model')
     

@@ -21,7 +21,7 @@ def evaluate():
     # Load data
     print("\nLoading test data...")
     data = DataLoader()
-    data.load_and_preprocess().split_data().scale_features()
+    data.load_and_preprocess()
     
     # Load model
     print("\nLoading trained model...")

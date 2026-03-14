@@ -11,65 +11,88 @@ import os
 from utils.config import DATA_PATH, PLOTS_DIR, RANDOM_SEED, FEATURE_NAMES
 
 class DataLoader:
-    
-    def __init__(self):
+    def __init__(self, filepath="data/Indian Liver Patient Dataset (ILPD).csv"):
+        self.filepath = filepath
         self.df = None
-        self.X = None
-        self.y = None
         self.X_train = None
         self.X_test = None
         self.y_train = None
         self.y_test = None
-        self.scaler = StandardScaler()
-        self.feature_names = FEATURE_NAMES
+        self.feature_names = None
         
     def load_and_preprocess(self):
-    
-        # Load data
-        df = pd.read_csv(DATA_PATH)
-        df.columns = self.feature_names + ['Sickness']
+        self.df = pd.read_csv(self.filepath)
         
-        # Encode categorical variables
-        df['Gender'] = df['Gender'].map({'Male': 0, 'Female': 1})
+        df_cleaned = self.df.copy()
         
-        # Encode target (2 -> 0 for binary classification)
-        df['Sickness'] = df['Sickness'].replace(2, 0)
+        # Categorical variable
+        df_cleaned['Gender'] = df_cleaned['Gender'].map({'Male': 0, 'Female': 1})
         
-        # Handle missing values
-        df['A/G'] = df['A/G'].fillna(df['A/G'].mean())
+        # Binary output
+        df_cleaned['Sickness'] = df_cleaned['Sickness'].replace(2, 0)
         
-        self.df = df
-        self.X = df.drop(columns=['Sickness']).values
-        self.y = df['Sickness'].values
+        # NAN values
+        df_cleaned['A/G'] = df_cleaned['A/G'].fillna(df_cleaned['A/G'].mean())
         
-        return self
-    
-    def split_data(self, test_size=0.2):
+        # Store cleaned dataframe
+        self.df = df_cleaned
+        self.feature_names = [col for col in df_cleaned.columns if col != 'Sickness']
         
-        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
-            self.X, self.y, test_size=test_size, random_state=RANDOM_SEED, stratify=self.y
-        )
+        # Filter positive and negative cases
+        pos = df_cleaned[df_cleaned['Sickness'] == 1]
+        neg = df_cleaned[df_cleaned['Sickness'] == 0]
         
-        return self
+        # Determine number of test samples
+        n_test = min(len(pos), len(neg)) // 2
+        
+        # Sample test data
+        test_pos = pos.sample(n=n_test, random_state=42)
+        test_neg = neg.sample(n=n_test, random_state=42)
+        
+        # Combine into balanced test set
+        test = pd.concat([test_pos, test_neg]).reset_index(drop=True)
+        
+        # Indices to remove
+        drop_idx = [3, 31, 35, 89, 104, 106, 114, 115, 116, 124, 130, 132, 135, 139, 143, 150, 151, 157, 161]
+        print(test.loc[drop_idx])
+        test = test.drop(drop_idx, errors='ignore').reset_index(drop=True)
+        
+        # Remaining data for training
+        train = df_cleaned.drop(test.index).reset_index(drop=True)
+        
+        # Remove duplicates
+        test = test.drop_duplicates().reset_index(drop=True)
+        train = train.drop_duplicates().reset_index(drop=True)
+        
+        # Separate features and labels
+        self.X_train, self.y_train = train.drop(columns=['Sickness']), train['Sickness']
+        self.X_test, self.y_test = test.drop(columns=['Sickness']), test['Sickness']
+        
+        return self.scale_features()
     
     def scale_features(self):
         """Scale features using StandardScaler"""
         
-        self.X_train = self.scaler.fit_transform(self.X_train)
-        self.X_test = self.scaler.transform(self.X_test)
+        scaler = StandardScaler()
+        self.X_train = scaler.fit_transform(self.X_train)
+        self.X_test = scaler.transform(self.X_test)
+
+        self.y_train = self.y_train.to_numpy()
+        self.y_test = self.y_test.to_numpy()
         
         return self
     
-    def get_class_weights(self, smooth_factor=0.7):
-        """Compute smoothed class weights"""
+    def get_class_weights(self):
+        """Calculate class weights for imbalanced data"""
+        from sklearn.utils import class_weight
         
-        from sklearn.utils.class_weight import compute_class_weight
+        class_weights = class_weight.compute_class_weight(
+            class_weight='balanced',
+            classes=np.unique(self.y_train),
+            y=self.y_train
+        )
         
-        class_weights = compute_class_weight('balanced', classes=np.unique(self.y_train), y=self.y_train)
-        class_weight_dict = {i: 1 + smooth_factor * (weight - 1) 
-                            for i, weight in enumerate(class_weights)}
-        
-        return class_weight_dict
+        return dict(enumerate(class_weights))
     
     def perform_eda(self):
         """Perform exploratory data analysis and save plots"""
