@@ -76,11 +76,11 @@ A **7–8% decrease in accuracy** confirms that the removed features were genuin
 
 ## SHAP Feature Importance
 
-![SHAP Summary](xai\results\shap_summary.png)
+![SHAP Summary](https://github.com/fatimasood/XAI-Hybrid-Quantum-Liver-Disease-Detection/blob/main/xai/results/shap_importance.png)
 
 ## Ablation Study Results
 
-![Ablation Study](xai\results\ablation_study.png)
+![Ablation Study](https://github.com/fatimasood/XAI-Hybrid-Quantum-Liver-Disease-Detection/blob/main/xai/results/ablation_study.png)
 
 ---
 
