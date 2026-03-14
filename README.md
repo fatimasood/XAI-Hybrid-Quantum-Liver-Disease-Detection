@@ -76,8 +76,11 @@ A **7–8% decrease in accuracy** confirms that the removed features were genuin
 
 ## SHAP Feature Importance
 
+![SHAP Summary](xai\results\shap_summary.png)
 
 ## Ablation Study Results
+
+![Ablation Study](xai\results\ablation_study.png)
 
 ---
 
