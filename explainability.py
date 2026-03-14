@@ -13,6 +13,7 @@ from xai.shap_analysis import SHAPAnalyzer
 from xai.integrated_gradients import IntegratedGradients
 from xai.permutation_importance import PermutationImportance
 from utils.config import MODELS_DIR, FEATURE_NAMES
+from xai.ablation_study import FeatureAblator
 
 def explain():
     """Main explainability pipeline"""
@@ -81,6 +82,12 @@ def explain():
     
     # Get permutation importance ranking
     ranked_perm = perm_importance.get_ranked_features()
+
+
+    print("\nRunning Feature Ablation Study for Validation...")
+    ablator = FeatureAblator(model=loaded_model, data=data)
+    # Use SHAP or Permutation rankings to test
+    ablation_results = ablator.run_study(ranked_features)
     
     print("\n...... Feature Importance Comparison .....")
     print("\n{:<20s} {:<20s} {:<20s}".format("SHAP Rank", "Feature", "Permutation Rank"))
