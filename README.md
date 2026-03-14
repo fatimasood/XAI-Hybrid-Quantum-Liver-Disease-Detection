@@ -1,3 +1,4 @@
+
 # 🧬 Explainable Quantum AI for Liver Disease Detection
 
 ![Python](https://img.shields.io/badge/Python-3.10-blue)
@@ -6,49 +7,120 @@
 ![XAI](https://img.shields.io/badge/XAI-SHAP%20%7C%20Integrated%20Gradients-green)
 ![Status](https://img.shields.io/badge/Project-Research-blue)
 
-Hybrid **Quantum–Classical Neural Network (HQNN)** for liver disease prediction with **Explainable AI (XAI)** techniques.
+> Bridging **Quantum Machine Learning** and **Clinical Transparency** using Explainable AI.
 
-This project integrates **Quantum Machine Learning** with **Deep Learning** to build an interpretable model for healthcare diagnosis. The model combines **PennyLane quantum circuits** with classical neural networks and applies **SHAP** and **Integrated Gradients** to explain predictions.
+This repository presents a **Hybrid Quantum–Classical Neural Network (HQCNN)** designed for **liver disease detection** using the **Indian Liver Patient Dataset (ILPD)**.
 
-Dataset used: **Indian Liver Patient Dataset (ILPD)**.
+Unlike traditional black-box models, this project integrates **Explainable AI (XAI)** techniques and validates them using a **Feature Ablation Study** to ensure the model truly relies on meaningful clinical biomarkers.
+
+The objective is to demonstrate how **Quantum Machine Learning combined with Explainable AI** can produce **transparent and trustworthy healthcare prediction systems**.
 
 ---
 
-# 🚀 Key Features
+# 🌟 Key Innovations
 
-- Hybrid Quantum–Classical Neural Network
-- Explainable AI integration
-- Medical dataset classification
-- Model evaluation and performance metrics
-- Feature importance visualization using SHAP
+### Hybrid Quantum Architecture
+
+A **PennyLane variational quantum circuit** is integrated with a classical neural network built using **TensorFlow/Keras**, creating a hybrid model capable of learning complex nonlinear relationships within clinical data.
+
+### Multi-Method Explainability
+
+This project applies multiple XAI methods to interpret model predictions:
+
+* Kernel SHAP
+* Integrated Gradients
+* Permutation Feature Importance
+
+Using several explanation methods ensures that feature importance results are **consistent and reliable**.
+
+### Scientific Validation via Ablation Study
+
+A **feature ablation pipeline** validates explainability results.
+
+After identifying the most important clinical features using SHAP, these features are removed from the dataset and the model is retrained.
+
+A noticeable performance drop confirms that the model is **actually learning from medically relevant variables** rather than spurious correlations.
+
+### Clinically Relevant Insights
+
+The model identifies **Direct Bilirubin (DB)** and **Alkaline Phosphotase (Alkphos)** as dominant predictors of liver disease, which aligns with known clinical indicators.
+
+---
+
+# 📊 Model Performance
+
+| Metric                 | Result     |
+| ---------------------- | ---------- |
+| Baseline Accuracy      | **80.14%** |
+| Recall (Disease Class) | **75%**    |
+| AUC Score              | **~0.85**  |
+
+The training process demonstrates **stable convergence** with minimal overfitting, indicated by similar training and validation curves.
+
+---
+
+# 🔬 XAI Validation (Ablation Study)
+
+Explainability results are validated using **feature removal experiments**.
+
+| Experiment                  | Accuracy |
+| --------------------------- | -------- |
+| Baseline Model              | **80%**  |
+| After Removing Top Features | **~72%** |
+
+A **7–8% decrease in accuracy** confirms that the removed features were genuinely important to the model’s predictions.
+
+---
+
+# 📊 Visual Results
+
+## SHAP Feature Importance
+
+
+## Ablation Study Results
 
 ---
 
 # 🛠 Tech Stack
 
-- Python
-- TensorFlow / Keras
-- PennyLane (Quantum Machine Learning)
-- SHAP
-- Scikit-Learn
-- NumPy / Pandas
-- Matplotlib / Seaborn
+* Python
+* TensorFlow / Keras
+* PennyLane (Quantum Machine Learning)
+* SHAP
+* Scikit-Learn
+* NumPy / Pandas
+* Matplotlib / Seaborn
 
 ---
 
 # 📂 Project Structure
 
 ```
-project/
-│
-├── data/              # Dataset
-├── models/            # Hybrid quantum model
-├── xai/               # Explainability methods
-├── plots/             # Generated visualizations
-│
-├── train.py           # Model training
-├── evaluate.py        # Model evaluation
-└── explainability.py  # XAI analysis
+XAI-Quantum-Liver-Disease-Detection/
+
+data/
+│   Liver Patient Dataset (ILPD)
+
+models/
+│   Hybrid Quantum-Classical Model
+
+xai/
+│   SHAP analysis
+│   Integrated Gradients
+│   Permutation Importance
+
+validation/
+│   Feature Ablation Study
+
+plots/
+│   Generated visualizations
+
+results/
+│   Metrics and experiment outputs
+
+train.py
+evaluate.py
+explainability.py
 ```
 
 ---
@@ -57,14 +129,14 @@ project/
 
 Clone the repository
 
-```bash
+```
 git clone https://github.com/fatimasood/XAI-Quantum-Liver-Disease-Detection.git
 cd XAI-Quantum-Liver-Disease-Detection
 ```
 
 Create virtual environment
 
-```bash
+```
 python -m venv qml_env
 ```
 
@@ -72,19 +144,19 @@ Activate environment
 
 Linux / Mac
 
-```bash
+```
 source qml_env/bin/activate
 ```
 
 Windows
 
-```bash
+```
 qml_env\Scripts\activate
 ```
 
 Install dependencies
 
-```bash
+```
 pip install -r requirements.txt
 ```
 
@@ -92,42 +164,38 @@ pip install -r requirements.txt
 
 # ▶️ Running the Project
 
-Train the model
+Train the hybrid quantum model
 
-```bash
+```
 python train.py
 ```
 
-Evaluate the model
+Evaluate the trained model
 
-```bash
+```
 python evaluate.py
 ```
 
-Run explainability analysis
+Generate explainability analysis
 
-```bash
+```
 python explainability.py
 ```
 
 ---
 
-# 📊 Model Visualization
+# 🎯 Research Contribution
 
-<img width="4112" height="1769" alt="Model Architecture" src="https://github.com/user-attachments/assets/4fefe54d-7574-4163-af63-9797c7d10779" />
+This project demonstrates how **Explainable AI can be integrated with Quantum Machine Learning** to develop **transparent healthcare prediction systems**.
 
-## 🔍 SHAP Feature Summary
-
-<img width="2254" height="1618" alt="image" src="https://github.com/user-attachments/assets/fb4f2e11-42a0-4967-ba56-db389c8de3bc" />
-
-(All images and results are in their respective folders.....)
----
-
-# 🙏 Acknowledgment
-
-This project is inspired by the research of Dr. Laura María Donaire and aims to bridge the gap between Quantum Computing and Healthcare Transparency.
+The inclusion of a **feature ablation validation pipeline** ensures that model explanations are **scientifically validated rather than purely visual interpretations**.
 
 ---
 
+LinkedIn: *https://www.linkedin.com/in/fatimamasoodfm/*
 
- 
+---
+
+# ⚠️ Disclaimer
+
+This project is intended for **research and educational purposes only** and should **not be used as a clinical diagnostic system** without medical validation.
