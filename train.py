@@ -36,7 +36,7 @@ def train():
         
         # Cross-validation
         print("\nPerforming cross-validation...")
-        kf = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)  # Reduced to 3 folds for faster testing
+        kf = StratifiedKFold(n_splits=10, shuffle=True, random_state=42)  # Reduced to 3 folds for faster testing
         cv_metrics = []
         
         for fold, (train_idx, val_idx) in enumerate(kf.split(data.X_train, data.y_train)):

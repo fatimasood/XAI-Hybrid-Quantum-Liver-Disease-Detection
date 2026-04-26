@@ -16,7 +16,7 @@ try:
 except ImportError:
     # Fallback values if config not available
     N_QUBITS = 2
-    N_QLAYERS = 4
+    N_QLAYERS = 2
     LEARNING_RATE = 0.001
     FOCAL_LOSS_GAMMA = 1.0
     FOCAL_LOSS_ALPHA = 0.3
@@ -85,8 +85,8 @@ class HybridQNN:
             ),
             ReduceLROnPlateau(
                 monitor='val_loss',
-                factor=0.5,
-                patience=5,
+                factor=0.7,
+                patience=10,
                 min_lr=1e-7
             )
         ]
