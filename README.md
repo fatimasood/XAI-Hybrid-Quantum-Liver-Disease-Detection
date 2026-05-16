@@ -47,13 +47,8 @@ The model identifies **Direct Bilirubin (DB)** and **Alkaline Phosphotase (Alkph
 
 ---
 
-# 📊 Model Performance
+<img width="958" height="971" alt="image" src="https://github.com/user-attachments/assets/3298766b-eed2-453b-b044-1231a733ca5a" />
 
-| Metric                 | Result     |
-| ---------------------- | ---------- |
-| Baseline Accuracy      | **80.14%** |
-| Recall (Disease Class) | **75%**    |
-| AUC Score              | **~0.85**  |
 
 The training process demonstrates **stable convergence** with minimal overfitting, indicated by similar training and validation curves.
 
@@ -65,7 +60,7 @@ Explainability results are validated using **feature removal experiments**.
 
 | Experiment                  | Accuracy |
 | --------------------------- | -------- |
-| Baseline Model              | **80%**  |
+| Baseline Model              | **85%**  |
 | After Removing Top Features | **~72%** |
 
 A **7–8% decrease in accuracy** confirms that the removed features were genuinely important to the model’s predictions.
