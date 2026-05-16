@@ -60,10 +60,10 @@ Explainability results are validated using **feature removal experiments**.
 
 | Experiment                  | Accuracy |
 | --------------------------- | -------- |
-| Baseline Model              | **85%**  |
-| After Removing Top Features | **~72%** |
+| Baseline Model              | **~0.8562**  |
+| After Removing Top Features | **~0.5890** |
 
-A **7–8% decrease in accuracy** confirms that the removed features were genuinely important to the model’s predictions.
+A **high decrease in accuracy** confirms that the removed features were genuinely important to the model’s predictions.
 
 ---
 
@@ -71,11 +71,13 @@ A **7–8% decrease in accuracy** confirms that the removed features were genuin
 
 ## SHAP Feature Importance
 
-![SHAP Summary](https://github.com/fatimasood/XAI-Hybrid-Quantum-Liver-Disease-Detection/blob/main/xai/results/shap_importance.png)
+![SHAP Summary]<img width="999" height="694" alt="image" src="https://github.com/user-attachments/assets/24407377-19d5-42b1-818a-4fb6c036f1c0" />
+
 
 ## Ablation Study Results
 
-![Ablation Study](https://github.com/fatimasood/XAI-Hybrid-Quantum-Liver-Disease-Detection/blob/main/xai/results/ablation_study.png)
+![Ablation Study]<img width="1237" height="739" alt="image" src="https://github.com/user-attachments/assets/106c81b1-5c94-4da9-9c38-bcc3646d86f9" />
+
 
 ---
 
