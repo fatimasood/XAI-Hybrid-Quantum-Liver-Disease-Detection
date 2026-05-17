@@ -67,7 +67,7 @@ class DataLoader:
         # Separate features and labels
         self.X_train, self.y_train = train.drop(columns=['Sickness']), train['Sickness']
         self.X_test, self.y_test = test.drop(columns=['Sickness']), test['Sickness']
-        
+        self.X_test_original = self.X_test.copy()
         return self.scale_features()
     
     def scale_features(self):
