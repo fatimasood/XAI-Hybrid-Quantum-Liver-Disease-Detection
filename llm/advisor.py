@@ -1,3 +1,4 @@
+# llm/advisor.py
 import os
 import numpy as np
 from typing import Dict, Optional
@@ -31,63 +32,80 @@ class LLMHealthAdvisor:
         if features.get('Alkphos', 0) > 129: anomalies.append(f"Elevated Alkaline Phosphatase ({features['Alkphos']} U/L)")
         if features.get('Sgpt', 0) > 40: anomalies.append(f"Elevated SGPT/ALT ({features['Sgpt']} U/L)")
         if features.get('Sgot', 0) > 40: anomalies.append(f"Elevated SGOT/AST ({features['Sgot']} U/L)")
-        if features.get('Sgot', 0) > 0 and features.get('Sgpt', 0) > 0:
-            ratio = features['Sgot'] / features['Sgpt']
-            if ratio > 1.5 and features['Sgot'] > 40:
-                anomalies.append(f"High AST/ALT Ratio ({ratio:.2f})")
-        return "\n".join([f"  * CRITICAL ANOMALY: {a}" for a in anomalies]) if anomalies else "No extreme baseline boundary violations."
+        return ", ".join(anomalies) if anomalies else "None"
 
     def _build_prompt(self, features, prob, shap_values, ablation_impact, ci_lower, ci_upper):
         risk = "low" if prob < 0.3 else ("moderate" if prob < 0.7 else "high")
-        feat_str = "\n".join([f"  - {k}: {v} (Normal: {self.REFERENCE_RANGES.get(k, 'N/A')})" for k, v in features.items()])
-        clinical = self._analyze_clinical_anomalies(features)
-        sorted_shap = sorted(shap_values.items(), key=lambda x: abs(x[1]), reverse=True)
-        shap_str = "\n".join([f"  * SHAP -> {k}: {v:+.4f}" for k, v in sorted_shap])
-        ablation_str = "\n".join([f"  * Ablation -> Removing [{k}] drops accuracy by: {v:+.4f}" for k, v in ablation_impact.items()])
-        ci_str = f"Quantum CI (95%): [{ci_lower:.3f} – {ci_upper:.3f}].\n" if ci_lower is not None else ""
+        clinical_outliers = self._analyze_clinical_anomalies(features)
+        
+        # PYTHON DETECTOR FOR MATHEMATICAL DIRECTIONS (Strict Guardrails)
+        pathological_drivers = [f"{k} ({v:+.4f})" for k, v in shap_values.items() if v > 0]
+        protective_factors = [f"{k} ({v:+.4f})" for k, v in shap_values.items() if v <= 0]
+        
+        patho_str = ", ".join(pathological_drivers[:2]) if pathological_drivers else "None detected"
+        prot_str = ", ".join(protective_factors[:2]) if protective_factors else "None detected"
+        
+        # Identify if any critical outlier has an inverted SHAP sign
+        anomalies_log = []
+        if features.get('Alkphos', 0) > 129 and shap_values.get('Alkphos', 0) < 0:
+            anomalies_log.append("WARNING: Elevated Alkphos is acting as a protective factor (Negative SHAP). This indicates an inverse mathematical feature relationship.")
+        if features.get('TB', 0) > 1.2 and shap_values.get('TB', 0) < 0:
+            anomalies_log.append("WARNING: Elevated Total Bilirubin is acting as a protective factor (Negative SHAP).")
+        if features.get('DB', 0) > 0.3 and shap_values.get('DB', 0) < 0:
+            anomalies_log.append("WARNING: Elevated Direct Bilirubin is acting as a protective factor (Negative SHAP).")
+            
+        anomalies_str = "\n".join([f"  * {item}" for item in anomalies_log]) if anomalies_log else "  * None. Feature directions align cleanly with standard expectations."
 
-        return f"""[SYSTEM DATA INGESTION PIPELINE]
-Patient Quantitative Metrics:
-{feat_str}
-Hybrid Quantum-Classical Model Analysis:
-- Target Probability: {prob:.3f}
-- Classification: {risk.upper()} RISK
-- {ci_str}
-Explainable AI (XAI) Mathematical Metrics:
-{shap_str}
-Ablation Study Feature Sensitivities:
+        ablation_str = "\n".join([f"  * Drop [{k}] layer reduces architecture accuracy by: {v:.4f}" for k, v in ablation_impact.items() if v > 0.02])
+        ci_str = f"95% CI Zone: [{ci_lower:.3f} – {ci_upper:.3f}]"
+
+        return f"""[DATA LOG]
+Patient Metrics: {list(features.items())}
+Model Risk Probability: {prob:.3f} ({risk.upper()} RISK) | {ci_str}
+
+[SHAP VERIFICATION]
+* Calculated Risk Drivers (+ SHAP): {patho_str}
+* Calculated Protective Factors (- SHAP): {prot_str}
+* Mathematical Inversion Check:
+{anomalies_str}
+
+[GLOBAL WEIGHTS]
 {ablation_str}
-Baseline Clinical Anomalies:
-{clinical}
 
-[INSTRUCTION]: Map the SHAP attributions and Ablation drops directly to the health strategy. State mathematically why the model prioritized specific parameters."""
+[CLINICAL OBSERVATION]
+Active Outliers: {clinical_outliers}"""
 
     def get_recommendations(self, features, prob, shap_values, ablation_impact,
-                            ci_lower=None, ci_upper=None, max_new_tokens=1500):
+                            ci_lower=None, ci_upper=None, max_new_tokens=600):
         user_msg = self._build_prompt(features, prob, shap_values, ablation_impact, ci_lower, ci_upper)
+        
+        # CLINICALLY SAFE SYSTEM PROMPT
         system_instruction = (
-            "You are an expert Explainable AI (XAI) Decision Support System for Quantum Medical Frameworks. "
-    "Your objective is to provide professional, non-diagnostic lifestyle and clinical strategies based on mathematical parameters. "
-    "\n\nCRITICAL CONSTRAINTS FOR EXAMINER VALIDATION:\n"
-    "1. You MUST start with the exact header: '**XAI Quantum Attribution Ingestion Review**'. Under this, explicitly identify the features "
-    "with the highest absolute SHAP values and the highest Ablation performance drops.\n"
-    "2. MATHEMATICAL CORRECTNESS RULE: A positive (+) SHAP value means that feature contributed to INCREASING the liver disease risk score. "
-    "A negative (-) SHAP value means that feature contributed to DECREASING the risk score (protecting the patient or lowering model confidence). "
-    "You must explain this distinction correctly based on the signs provided. Do not invert this logic.\n"
-    "3. CLINICAL CONTEXT RULE: Only call a parameter a 'critical anomaly' or 'abnormal' if it genuinely falls outside its provided normal range. "
-    "If a value is inside the normal range (e.g., Total Protein 7.9 within 6.6-8.7), explicitly treat it as stable/normal.\n"
-    "4. Do NOT dump raw SHAP or Ablation dictionaries inside the lifestyle bullet points. Keep the analysis restricted to the first section.\n"
-    "5. Structure the rest of the report using these exact markdown sections cleanly without redundancy:\n"
-    "   - **Targeted Dietary & Hydration Interventions**\n"
-    "   - **Metabolic Tracking & Physical Load Adjustments**\n"
-    "   - **Recommended Diagnostic Monitoring Protocols**\n"
-    "6. Keep responses highly concise and structured to prevent token truncation midway. Maintain a non-diagnostic posture.\n"
-    "7. You MUST terminate your complete response with exactly this literal string and nothing else after it:\n"
-    "Disclaimer: This is AI generated information for educational purposes only. Always consult a qualified healthcare provider."
+            "You are a precise, human-style Medical Informatics decision support system.\n"
+            "CRITICAL PROTOCOLS:\n"
+            "1. Output must be perfectly concise, professional, direct, and completely free of conversational fluff.\n"
+            "2. Under 'Mathematical Sensitivity', map the exact risk drivers and protective factors provided in the user log. If a 'WARNING' is listed under the Mathematical Inversion Check, you MUST explicitly name it as a model architectural artifact.\n"
+            "3. DO NOT order random dietary restrictions (e.g., do not advise restricting protein or fat arbitrarily as this can cause sarcopenia or mask diagnostic patterns). Advise maintaining balanced nutrition.\n"
+            "4. DO NOT attribute liver enzyme anomalies to 'dehydration'.\n"
+            "5. If Total Bilirubin, Direct Bilirubin, or Alkphos are elevated, always prioritize immediate Right Upper Quadrant (RUQ) abdominal ultrasound tracking over delayed imaging.\n\n"
+            "Strictly follow this layout and structure:\n\n"
+            "**XAI Quantum Attribution Ingestion Review**\n"
+            "- Mathematical Sensitivity: [Identify features increasing/decreasing risk exactly as computed in the logs. Explicitly note any structural artifacts/warnings if present].\n"
+            "- Global Architectural Weights: [State which top biomarkers trigger high ablation drops, validating that the hybrid quantum model relies on true medical biomarkers over demographic noise].\n\n"
+            "**Targeted Dietary & Hydration Interventions**\n"
+            "- [First highly concise bullet point focusing on maintaining a balanced, nutrient-dense diet to avoid nutritional deficits]\n"
+            "- [Second short, precise bullet point regarding standard hydration to support metabolic baseline]\n\n"
+            "**Metabolic Tracking & Physical Load Adjustments**\n"
+            "- [First brief bullet point regarding maintaining stable daily baseline activities]\n"
+            "- [Second short bullet point stating no active physical load limits or exercise restrictions are indicated unless symptomatic]\n\n"
+            "**Recommended Diagnostic Monitoring Protocols**\n"
+            "- [First brief tracking protocol, e.g., immediate Right Upper Quadrant (RUQ) abdominal ultrasound if biliary markers (TB, DB, Alkphos) are elevated]\n"
+            "- [Second short tracking point, e.g., repeat comprehensive hepatic panel testing to monitor acute trends]\n\n"
+            "You MUST terminate your complete response with exactly this literal string and nothing else after it:\n"
+            "Disclaimer: This is AI generated information for educational purposes only. Always consult a qualified healthcare provider."
         )
 
         try:
-            # Use chat_completion (available for most recent models on HF)
             response = self.client.chat_completion(
                 messages=[
                     {"role": "system", "content": system_instruction},
@@ -98,14 +116,12 @@ Baseline Clinical Anomalies:
             )
             return response.choices[0].message.content.strip()
         except Exception as e:
-            # Fallback to text_generation with chat template
             try:
                 prompt = f"<|system|>\n{system_instruction}</s>\n<|user|>\n{user_msg}</s>\n<|assistant|>"
                 output = self.client.text_generation(prompt, max_new_tokens=max_new_tokens, temperature=0.1, return_full_text=False)
                 return output.strip()
             except Exception as e2:
-                return f"LLM API error: {e2}"
-
+                return f"LLM Execution Error: {e2}"
 
 def estimate_confidence_interval(model, X_sample, n_iter=30, noise_std=0.05):
     preds = []
