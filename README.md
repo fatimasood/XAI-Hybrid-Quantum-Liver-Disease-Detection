@@ -48,6 +48,8 @@ The model identifies **Direct Bilirubin (DB)** and **Alkaline Phosphotase (Alkph
 ---
 
 <img width="958" height="971" alt="image" src="https://github.com/user-attachments/assets/3298766b-eed2-453b-b044-1231a733ca5a" />
+<img width="4112" height="1769" alt="image" src="https://github.com/user-attachments/assets/64d3c784-8a37-4415-8e1b-5544283ed339" />
+
 
 
 The training process demonstrates **stable convergence** with minimal overfitting, indicated by similar training and validation curves.
@@ -58,10 +60,7 @@ The training process demonstrates **stable convergence** with minimal overfittin
 
 Explainability results are validated using **feature removal experiments**.
 
-| Experiment                  | Accuracy |
-| --------------------------- | -------- |
-| Baseline Model              | **~0.8562**  |
-| After Removing Top Features | **~0.5890** |
+![Ablation Study]<img width="1237" height="739" alt="image" src="https://github.com/user-attachments/assets/106c81b1-5c94-4da9-9c38-bcc3646d86f9" />
 
 A **high decrease in accuracy** confirms that the removed features were genuinely important to the model’s predictions.
 
@@ -72,11 +71,6 @@ A **high decrease in accuracy** confirms that the removed features were genuinel
 ## SHAP Feature Importance
 
 ![SHAP Summary]<img width="999" height="694" alt="image" src="https://github.com/user-attachments/assets/24407377-19d5-42b1-818a-4fb6c036f1c0" />
-
-
-## Ablation Study Results
-
-![Ablation Study]<img width="1237" height="739" alt="image" src="https://github.com/user-attachments/assets/106c81b1-5c94-4da9-9c38-bcc3646d86f9" />
 
 
 ---
