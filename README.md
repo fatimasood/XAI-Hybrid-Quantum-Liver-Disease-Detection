@@ -47,9 +47,7 @@ The model identifies **Direct Bilirubin (DB)** and **Alkaline Phosphotase (Alkph
 
 ---
 
-<img width="958" height="971" alt="image" src="https://github.com/user-attachments/assets/3298766b-eed2-453b-b044-1231a733ca5a" />
 <img width="4112" height="1769" alt="image" src="https://github.com/user-attachments/assets/64d3c784-8a37-4415-8e1b-5544283ed339" />
-
 
 
 The training process demonstrates **stable convergence** with minimal overfitting, indicated by similar training and validation curves.
