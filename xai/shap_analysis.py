@@ -131,5 +131,7 @@ class SHAPAnalyzer:
             key=lambda x: x[1],
             reverse=True
         )
+        for f,v in ranked_features:
+            print(f,v)
         
         return ranked_features

@@ -3,6 +3,7 @@ import seaborn as sns
 import numpy as np
 from sklearn.metrics import confusion_matrix, roc_curve, precision_recall_curve
 import os
+from sklearn.calibration import calibration_curve
 from utils.config import PLOTS_DIR
 
 class EvaluationPlotter:
@@ -127,47 +128,32 @@ class EvaluationPlotter:
         
         return fig
     
-    def plot_calibration_curve(self, n_bins=10):
-        """Plot calibration curve"""
-        
-        # Bin predictions
-        bin_counts, bin_edges = np.histogram(self.y_prob, bins=n_bins)
-        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-        
-        # Calculate fraction of positives in each bin
-        fraction_positives = []
-        for i in range(n_bins):
-            mask = (self.y_prob >= bin_edges[i]) & (self.y_prob < bin_edges[i+1])
-            if np.sum(mask) > 0:
-                fraction_positives.append(np.mean(self.y_true[mask]))
-            else:
-                fraction_positives.append(0)
-        
-        plt.figure(figsize=(10, 8))
-        
-        # Perfect calibration line
-        plt.plot([0, 1], [0, 1], 'k--', label='Perfectly Calibrated')
-        
-        # Model calibration
-        plt.plot(bin_centers, fraction_positives, 'o-', lw=2, 
-                color='#9b59b6', label='Model')
-        
-        # Histogram of predictions
-        plt.hist(self.y_prob, bins=n_bins, density=True, alpha=0.3, 
-                color='gray', label='Prediction Density')
-        
-        plt.xlabel('Mean Predicted Probability')
-        plt.ylabel('Fraction of Positives')
-        plt.title('Calibration Curve', fontsize=14, fontweight='bold')
+    from sklearn.calibration import calibration_curve
+
+    def plot_calibration_curve(self):
+
+        prob_true, prob_pred = calibration_curve(
+        self.y_true,
+        self.y_prob,
+        n_bins=10,
+        strategy="uniform"
+        )
+        plt.figure(figsize=(8,8))
+        plt.plot(
+            prob_pred,
+            prob_true,
+            marker='o',
+            linewidth=2,
+            label="Hybrid Quantum-Classical Model")
+        plt.plot([0,1],[0,1],'--',color='gray',label="Probability Calibration Curve")
+
+        plt.xlabel("Mean Predicted Probability")
+        plt.ylabel("Observed Frequency")
+        plt.title("Calibration Curve")
+        plt.grid(alpha=0.3)
         plt.legend()
-        plt.grid(True, alpha=0.3)
-        
-        plt.tight_layout()
-        plt.savefig(os.path.join(PLOTS_DIR, 'calibration_curve.png'), 
-                   dpi=300, bbox_inches='tight')
+        plt.savefig(os.path.join(PLOTS_DIR, 'calibration_curve.png'), dpi=300, bbox_inches='tight')
         plt.show()
-        
-        return plt.gcf()
     
     def plot_metrics_radar(self, metrics_dict):
         """Plot radar chart of metrics"""

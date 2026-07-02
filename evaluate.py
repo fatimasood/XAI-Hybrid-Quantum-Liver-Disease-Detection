@@ -7,10 +7,12 @@ import numpy as np
 import tensorflow as tf
 import os
 
+from models.quantum_visualization import QuantumVisualizer
+from plots.evaluation_plots import EvaluationPlotter
 from utils.data_loader import DataLoader
 from utils.metrics import MetricsCalculator
 from models.hybrid_qnn import HybridQNN
-from plots.evaluation_plots import EvaluationPlotter
+from sklearn.calibration import calibration_curve
 from utils.config import MODELS_DIR
 
 def evaluate():
@@ -76,6 +78,9 @@ def evaluate():
     plotter.plot_calibration_curve()
     plotter.plot_metrics_radar({k: v for k, v in metrics.items()  if k in ['accuracy', 'precision', 'recall', 'specificity', 'f1_score', 'roc_auc']})
     plotter.plot_prediction_distribution()
+
+    quantum_visualizer = QuantumVisualizer()
+    quantum_visualizer.draw_circuit()
     
     print("Evaluation completed! All plots saved to plots or directory")
     
