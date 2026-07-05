@@ -9,6 +9,12 @@ import os
 import sys
 import traceback
 
+PROJECT_ROOT = os.path.dirname(
+    os.path.dirname(os.path.abspath(__file__))
+)
+
+sys.path.insert(0, PROJECT_ROOT)
+
 # Add project directory to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -133,12 +139,9 @@ def train():
             verbose=1
         )
 
-        final_model.save(
-            os.path.join(
-                MODELS_DIR,
-                "classical_final_model.h5"
-            )
-        )
+        # Save model
+        final_model.save(os.path.join(MODELS_DIR, 'classical_final_model'))
+        print(f"\nwithout quantization Model saved to {MODELS_DIR}")
 
         print("\nModel Saved Successfully!")
 
