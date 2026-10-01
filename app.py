@@ -8,6 +8,10 @@ import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 import os, sys
 
+# Silence TensorFlow noise (added to keep logs clean on Streamlit Cloud)
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
 # Project environment setups
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv()
@@ -19,13 +23,12 @@ from llm.xai_extractor import XAIFeatureExtractor
 
 # Page structure layout configuration
 st.set_page_config(
-    page_title="XAI‑QNN Liver Risk Advisor",
+    page_title="XAI QNN Liver Risk Advisor",
     page_icon="🧬",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom dynamic theme adjustments for dark/light variations
 st.markdown("""
 <style>
     .main-title {
@@ -76,7 +79,7 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("### Framework Workflow\n1. Quantum Feature Mapping\n2. SHAP Perturbation\n3. Clinical LLM Evaluation")
 
 # Main Interface Header Section
-st.markdown("<div class='main-title'>🧬 XAI‑QNN Liver Risk Advisor</div>", unsafe_allow_html=True)
+st.markdown("<div class='main-title'>🧬 XAI QNN Liver Risk Advisor</div>", unsafe_allow_html=True)
 st.markdown("<div class='sub-title'>Explainable AI meets Large Language Models for clinical decision support</div>", unsafe_allow_html=True)
 
 # Core processing calculations for selected index
@@ -112,7 +115,8 @@ with left_layout:
         }
     ))
     gauge_indicator.update_layout(height=180, margin=dict(l=20, r=20, t=30, b=10), paper_bgcolor='rgba(0,0,0,0)')
-    st.plotly_chart(gauge_indicator, width='stretch')
+
+    st.plotly_chart(gauge_indicator, use_container_width=True)
 
     # Evaluating classification category tag
     if prediction_score >= 0.7:
@@ -140,7 +144,6 @@ with right_layout:
         "Standard Bounds": [LLMHealthAdvisor.REFERENCE_RANGES.get(k, 'N/A') for k in patient_features.keys()]
     })
     
-    # Conditional formatting check logic for outlier features
     def trace_anomalies(data_row):
         test_id = str(data_row['Medical Test'])
         val = data_row['Patient Value']
@@ -148,7 +151,12 @@ with right_layout:
             return ['background-color: rgba(230, 57, 70, 0.2)'] * len(data_row)
         return [''] * len(data_row)
         
-    st.dataframe(table_data.style.apply(trace_anomalies, axis=1), width='stretch', height=240)
+
+    st.dataframe(
+        table_data.style.apply(trace_anomalies, axis=1),
+        use_container_width=True,
+        height=240
+    )
     st.markdown("</div>", unsafe_allow_html=True)
 
 # XAI Core Attribution Explanations
