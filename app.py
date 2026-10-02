@@ -8,7 +8,6 @@ import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 import os, sys
 
-# Silence TensorFlow noise (added to keep logs clean on Streamlit Cloud)
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
@@ -21,7 +20,6 @@ from utils.config import MODELS_DIR
 from llm.advisor import LLMHealthAdvisor, estimate_confidence_interval
 from llm.xai_extractor import XAIFeatureExtractor
 
-# Page structure layout configuration
 st.set_page_config(
     page_title="XAI QNN Liver Risk Advisor",
     page_icon="🧬",

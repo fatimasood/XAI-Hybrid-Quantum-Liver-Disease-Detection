@@ -22,7 +22,8 @@ class LLMHealthAdvisor:
         self.model_name = model_name
         self.client = InferenceClient(
             model=self.model_name,
-            token=api_token or os.getenv("HF_TOKEN")
+            token=api_token or os.getenv("HF_TOKEN"),
+            base_url="https://router.huggingface.co" 
         )
 
     def _analyze_clinical_anomalies(self, features):
