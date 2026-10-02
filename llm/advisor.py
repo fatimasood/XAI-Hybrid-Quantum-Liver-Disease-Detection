@@ -20,10 +20,10 @@ class LLMHealthAdvisor:
 
     def __init__(self, model_name="Qwen/Qwen2.5-1.5B-Instruct", api_token=None):
         self.model_name = model_name
+        # Yahan model= nahi likhna, sirf base_url aur token pass karna hai
         self.client = InferenceClient(
-            model=self.model_name,
-            token=api_token or os.getenv("HF_TOKEN"),
-            base_url="https://router.huggingface.co" 
+            base_url="https://router.huggingface.co",
+            token=api_token or os.getenv("HF_TOKEN")
         )
 
     def _analyze_clinical_anomalies(self, features):
@@ -39,14 +39,12 @@ class LLMHealthAdvisor:
         risk = "low" if prob < 0.3 else ("moderate" if prob < 0.7 else "high")
         clinical_outliers = self._analyze_clinical_anomalies(features)
         
-        # PYTHON DETECTOR FOR MATHEMATICAL DIRECTIONS (Strict Guardrails)
         pathological_drivers = [f"{k} ({v:+.4f})" for k, v in shap_values.items() if v > 0]
         protective_factors = [f"{k} ({v:+.4f})" for k, v in shap_values.items() if v <= 0]
         
         patho_str = ", ".join(pathological_drivers[:2]) if pathological_drivers else "None detected"
         prot_str = ", ".join(protective_factors[:2]) if protective_factors else "None detected"
         
-        # Identify if any critical outlier has an inverted SHAP sign
         anomalies_log = []
         if features.get('Alkphos', 0) > 129 and shap_values.get('Alkphos', 0) < 0:
             anomalies_log.append("WARNING: Elevated Alkphos is acting as a protective factor (Negative SHAP). This indicates an inverse mathematical feature relationship.")
@@ -80,7 +78,6 @@ Active Outliers: {clinical_outliers}"""
                             ci_lower=None, ci_upper=None, max_new_tokens=600):
         user_msg = self._build_prompt(features, prob, shap_values, ablation_impact, ci_lower, ci_upper)
         
-        # CLINICALLY SAFE SYSTEM PROMPT
         system_instruction = (
             "You are a precise, human-style Medical Informatics decision support system.\n"
             "CRITICAL PROTOCOLS:\n"
@@ -107,7 +104,9 @@ Active Outliers: {clinical_outliers}"""
         )
 
         try:
+            # Yahan model=self.model_name pass karna hai
             response = self.client.chat_completion(
+                model=self.model_name,
                 messages=[
                     {"role": "system", "content": system_instruction},
                     {"role": "user", "content": user_msg}
@@ -119,7 +118,14 @@ Active Outliers: {clinical_outliers}"""
         except Exception as e:
             try:
                 prompt = f"<|system|>\n{system_instruction}</s>\n<|user|>\n{user_msg}</s>\n<|assistant|>"
-                output = self.client.text_generation(prompt, max_new_tokens=max_new_tokens, temperature=0.1, return_full_text=False)
+                # Fallback mein bhi model pass karein
+                output = self.client.text_generation(
+                    model=self.model_name,
+                    prompt=prompt, 
+                    max_new_tokens=max_new_tokens, 
+                    temperature=0.1, 
+                    return_full_text=False
+                )
                 return output.strip()
             except Exception as e2:
                 return f"LLM Execution Error: {e2}"
