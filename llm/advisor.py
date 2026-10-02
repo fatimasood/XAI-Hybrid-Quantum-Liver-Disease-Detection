@@ -18,7 +18,7 @@ class LLMHealthAdvisor:
         'A/G':      '1.1–2.5 (Albumin/Globulin Ratio)',
     }
 
-    def __init__(self, model_name="Qwen/Qwen2.5-7B-Instruct", api_token=None):
+    def __init__(self, model_name="Qwen/Qwen2.5-1.5B-Instruct", api_token=None):
         self.model_name = model_name
         self.client = InferenceClient(
             model=self.model_name,
