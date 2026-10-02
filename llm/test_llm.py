@@ -1,80 +1,138 @@
-import os, sys
+import os
 import numpy as np
-from dotenv import load_dotenv
-base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(base_dir)
-load_dotenv(os.path.join(base_dir, ".env"))
+from typing import Dict, Optional
+from huggingface_hub import InferenceClient
 
-from utils.data_loader import DataLoader
-from utils.config import MODELS_DIR, FEATURE_NAMES
-import tensorflow as tf
-from llm.advisor import LLMHealthAdvisor, estimate_confidence_interval
-from llm.xai_extractor import XAIFeatureExtractor
+class LLMHealthAdvisor:
+    REFERENCE_RANGES = {
+        'Age':      'Adult context',
+        'Gender':   '0 = Male, 1 = Female',
+        'TB':       '0.1–1.2 mg/dL (Total Bilirubin)',
+        'DB':       '0.0–0.3 mg/dL (Direct Bilirubin)',
+        'Alkphos':  '40–129 U/L (Alkaline Phosphatase)',
+        'Sgpt':     '10–40 U/L (ALT)',
+        'Sgot':     '10–40 U/L (AST)',
+        'TP':       '6.6–8.7 g/dL (Total Protein)',
+        'ALB':      '3.5–5.0 g/dL (Albumin)',
+        'A/G':      '1.1–2.5 (Albumin/Globulin Ratio)',
+    }
 
-def main():
-    print("Loading data and model...")
-    data = DataLoader()
-    data.load_and_preprocess()   # now X_test_original is available
-    
-    model_path = os.path.join(MODELS_DIR, 'final_model')
-    if not os.path.exists(model_path):
-        raise FileNotFoundError(f"Train model first. Not found: {model_path}")
-    model = tf.keras.models.load_model(model_path)
-    
-    print("Preparing SHAP explainer (takes ~30s for KernelSHAP)...")
-    xai_ext = XAIFeatureExtractor(model, data.X_train, data.X_test)
-    xai_ext.prepare_shap(n_background=50)
-    
-    advisor = LLMHealthAdvisor()
-    
-    artifact_file = os.path.join(base_dir, "xai_thesis_artifacts.md")
-    with open(artifact_file, "w", encoding="utf-8") as f:
-        f.write("# Explainable Clinical Reports (Real SHAP + QNN)\n")
-        f.write(f"Model: {advisor.model_name}\n\n---\n\n")
-    
-    n_samples = min(3, len(data.X_test_original))
-    for i in range(n_samples):
-        print(f"\n{'='*60}\nSample {i}")
-        # Original scale features for LLM
-        row = data.X_test_original.iloc[i]
-        features = row.to_dict()
-        
-        # Scaled input for prediction
-        X_scaled = data.X_test[i:i+1]
-        prob = model.predict(X_scaled, verbose=0).flatten()[0]
-        ci_low, ci_high = estimate_confidence_interval(model, X_scaled, n_iter=30, noise_std=0.05)
-        
-        # Real SHAP
-        top_features = xai_ext.get_top_features(i, top_k=3)
-        shap_dict = xai_ext.get_shap_dict(i)            # all features
-        ablation_dict = xai_ext.get_ablation_dict(top_features)
-        
-        print("Top SHAP:")
-        for f in top_features:
-            print(f"  {f['feature']}: {f['shap_impact']:+.4f}")
-        print(f"Probability: {prob:.3f}, CI: [{ci_low:.3f}, {ci_high:.3f}]")
-        
-        report = advisor.get_recommendations(
-            features=features,
-            prob=prob,
-            shap_values=shap_dict,
-            ablation_impact=ablation_dict,
-            ci_lower=ci_low,
-            ci_upper=ci_high
+    def __init__(self, model_name="Qwen/Qwen2.5-1.5B-Instruct", api_token=None):
+        self.model_name = model_name
+        # base_url 
+        self.client = InferenceClient(
+            base_url="https://router.huggingface.co/v1",
+            api_key=api_token or os.getenv("HF_TOKEN")
         )
-        print("\nLLM Report:\n" + report)
-        
-        with open(artifact_file, "a", encoding="utf-8") as f:
-            f.write(f"## Sample {i} (Prob={prob:.3f})\n")
-            f.write("SHAP Vectors:\n")
-            for k, v in shap_dict.items():
-                f.write(f"- {k}: {v:+.4f}\n")
-            f.write("\nAblation:\n")
-            for k, v in ablation_dict.items():
-                f.write(f"- {k}: {v:+.4f}\n")
-            f.write(f"\n{report}\n\n---\n\n")
-    
-    print(f"\nArtifacts saved to {artifact_file}")
 
-if __name__ == "__main__":
-    main()
+    def _analyze_clinical_anomalies(self, features):
+        anomalies = []
+        if features.get('TB', 0) > 1.2: anomalies.append(f"Elevated Total Bilirubin ({features['TB']} mg/dL)")
+        if features.get('DB', 0) > 0.3: anomalies.append(f"Elevated Direct Bilirubin ({features['DB']} mg/dL)")
+        if features.get('Alkphos', 0) > 129: anomalies.append(f"Elevated Alkaline Phosphatase ({features['Alkphos']} U/L)")
+        if features.get('Sgpt', 0) > 40: anomalies.append(f"Elevated SGPT/ALT ({features['Sgpt']} U/L)")
+        if features.get('Sgot', 0) > 40: anomalies.append(f"Elevated SGOT/AST ({features['Sgot']} U/L)")
+        return ", ".join(anomalies) if anomalies else "None"
+
+    def _build_prompt(self, features, prob, shap_values, ablation_impact, ci_lower, ci_upper):
+        risk = "low" if prob < 0.3 else ("moderate" if prob < 0.7 else "high")
+        clinical_outliers = self._analyze_clinical_anomalies(features)
+
+        pathological_drivers = [f"{k} ({v:+.4f})" for k, v in shap_values.items() if v > 0]
+        protective_factors = [f"{k} ({v:+.4f})" for k, v in shap_values.items() if v <= 0]
+
+        patho_str = ", ".join(pathological_drivers[:2]) if pathological_drivers else "None detected"
+        prot_str = ", ".join(protective_factors[:2]) if protective_factors else "None detected"
+
+        anomalies_log = []
+        if features.get('Alkphos', 0) > 129 and shap_values.get('Alkphos', 0) < 0:
+            anomalies_log.append("WARNING: Elevated Alkphos is acting as a protective factor (Negative SHAP). This indicates an inverse mathematical feature relationship.")
+        if features.get('TB', 0) > 1.2 and shap_values.get('TB', 0) < 0:
+            anomalies_log.append("WARNING: Elevated Total Bilirubin is acting as a protective factor (Negative SHAP).")
+        if features.get('DB', 0) > 0.3 and shap_values.get('DB', 0) < 0:
+            anomalies_log.append("WARNING: Elevated Direct Bilirubin is acting as a protective factor (Negative SHAP).")
+
+        anomalies_str = "\n".join([f"  * {item}" for item in anomalies_log]) if anomalies_log else "  * None. Feature directions align cleanly with standard expectations."
+
+        ablation_str = "\n".join([f"  * Drop [{k}] layer reduces architecture accuracy by: {v:.4f}" for k, v in ablation_impact.items() if v > 0.02])
+        ci_str = f"95% CI Zone: [{ci_lower:.3f} – {ci_upper:.3f}]"
+
+        return f"""[DATA LOG]
+Patient Metrics: {list(features.items())}
+Model Risk Probability: {prob:.3f} ({risk.upper()} RISK) | {ci_str}
+
+[SHAP VERIFICATION]
+* Calculated Risk Drivers (+ SHAP): {patho_str}
+* Calculated Protective Factors (- SHAP): {prot_str}
+* Mathematical Inversion Check:
+{anomalies_str}
+
+[GLOBAL WEIGHTS]
+{ablation_str}
+
+[CLINICAL OBSERVATION]
+Active Outliers: {clinical_outliers}"""
+
+    def get_recommendations(self, features, prob, shap_values, ablation_impact,
+                            ci_lower=None, ci_upper=None, max_new_tokens=600):
+        user_msg = self._build_prompt(features, prob, shap_values, ablation_impact, ci_lower, ci_upper)
+
+        system_instruction = (
+            "You are a precise, human-style Medical Informatics decision support system.\n"
+            "CRITICAL PROTOCOLS:\n"
+            "1. Output must be perfectly concise, professional, direct, and completely free of conversational fluff.\n"
+            "2. Under 'Mathematical Sensitivity', map the exact risk drivers and protective factors provided in the user log. If a 'WARNING' is listed under the Mathematical Inversion Check, you MUST explicitly name it as a model architectural artifact.\n"
+            "3. DO NOT order random dietary restrictions (e.g., do not advise restricting protein or fat arbitrarily as this can cause sarcopenia or mask diagnostic patterns). Advise maintaining balanced nutrition.\n"
+            "4. DO NOT attribute liver enzyme anomalies to 'dehydration'.\n"
+            "5. If Total Bilirubin, Direct Bilirubin, or Alkphos are elevated, always prioritize immediate Right Upper Quadrant (RUQ) abdominal ultrasound tracking over delayed imaging.\n\n"
+            "Strictly follow this layout and structure:\n\n"
+            "**XAI Quantum Attribution Ingestion Review**\n"
+            "- Mathematical Sensitivity: [Identify features increasing/decreasing risk exactly as computed in the logs. Explicitly note any structural artifacts/warnings if present].\n"
+            "- Global Architectural Weights: [State which top biomarkers trigger high ablation drops, validating that the hybrid quantum model relies on true medical biomarkers over demographic noise].\n\n"
+            "**Targeted Dietary & Hydration Interventions**\n"
+            "- [First highly concise bullet point focusing on maintaining a balanced, nutrient-dense diet to avoid nutritional deficits]\n"
+            "- [Second short, precise bullet point regarding standard hydration to support metabolic baseline]\n\n"
+            "**Metabolic Tracking & Physical Load Adjustments**\n"
+            "- [First brief bullet point regarding maintaining stable daily baseline activities]\n"
+            "- [Second short bullet point stating no active physical load limits or exercise restrictions are indicated unless symptomatic]\n\n"
+            "**Recommended Diagnostic Monitoring Protocols**\n"
+            "- [First brief tracking protocol, e.g., immediate Right Upper Quadrant (RUQ) abdominal ultrasound if biliary markers (TB, DB, Alkphos) are elevated]\n"
+            "- [Second short tracking point, e.g., repeat comprehensive hepatic panel testing to monitor acute trends]\n\n"
+            "You MUST terminate your complete response with exactly this literal string and nothing else after it:\n"
+            "Disclaimer: This is AI generated information for educational purposes only. Always consult a qualified healthcare provider."
+        )
+
+        try:
+            
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": system_instruction},
+                    {"role": "user", "content": user_msg}
+                ],
+                max_tokens=max_new_tokens,
+                temperature=0.1
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            try:
+               
+                prompt = f"<|system|>\n{system_instruction}</s>\n<|user|>\n{user_msg}</s>\n<|assistant|>"
+                output = self.client.text_generation(
+                    model=self.model_name,
+                    prompt=prompt,
+                    max_new_tokens=max_new_tokens,
+                    temperature=0.1,
+                    return_full_text=False
+                )
+                return output.strip()
+            except Exception as e2:
+                return f"LLM Execution Error: {e2}"
+
+def estimate_confidence_interval(model, X_sample, n_iter=30, noise_std=0.05):
+    preds = []
+    for _ in range(n_iter):
+        X_perturbed = X_sample + np.random.normal(0, noise_std, X_sample.shape)
+        preds.append(model.predict(X_perturbed, verbose=0).flatten()[0])
+    preds = np.array(preds)
+    return np.percentile(preds, 2.5), np.percentile(preds, 97.5)
